@@ -1,0 +1,1323 @@
+// The exported code uses Tailwind CSS. Install Tailwind CSS in your dev environment to ensure all styles work.
+
+import React, { useState, useEffect } from 'react';
+import { Menu, Input, Card, Button, Badge, Rate, Tag, Modal, Form, Select, Checkbox, Radio, InputNumber, Avatar, Drawer, Tabs, Steps, message, Carousel, Divider } from 'antd';
+import { SearchOutlined, ShoppingCartOutlined, UserOutlined, MenuOutlined, FilterOutlined, HeartOutlined, ClockCircleOutlined, StarOutlined, PlusOutlined, MinusOutlined, EnvironmentOutlined, PhoneOutlined, CreditCardOutlined, WalletOutlined, CheckCircleOutlined } from '@ant-design/icons';
+
+const { Search } = Input;
+const { Option } = Select;
+const { TabPane } = Tabs;
+const { Step } = Steps;
+
+interface Restaurant {
+  id: string;
+  name: string;
+  cuisine: string;
+  rating: number;
+  deliveryTime: string;
+  priceRange: string;
+  image: string;
+  isVeg: boolean;
+  offers?: string;
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  isVeg: boolean;
+  category: string;
+}
+
+interface CartItem extends MenuItem {
+  quantity: number;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  addresses: Address[];
+}
+
+interface Address {
+  id: string;
+  type: string;
+  address: string;
+  landmark: string;
+}
+
+const App: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartVisible, setIsCartVisible] = useState(false);
+  const [isMobileMenuVisible, setIsMobileMenuVisible] = useState(false);
+  const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
+  const [isSignupModalVisible, setIsSignupModalVisible] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [searchLocation, setSearchLocation] = useState('');
+  const [searchFood, setSearchFood] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState({
+    rating: [],
+    priceRange: [],
+    cuisine: []
+  });
+  const [checkoutStep, setCheckoutStep] = useState(0);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [orderPlaced, setOrderPlaced] = useState(false);
+
+  const restaurants: Restaurant[] = [
+    {
+      id: '1',
+      name: 'Spice Garden',
+      cuisine: 'Indian, Chinese',
+      rating: 4.3,
+      deliveryTime: '25-30 mins',
+      priceRange: '₹200 for two',
+      image: 'https://readdy.ai/api/search-image?query=modern%20indian%20restaurant%20interior%20with%20warm%20lighting%20elegant%20dining%20tables%20and%20traditional%20decor%20elements%20creating%20inviting%20atmosphere%20for%20fine%20dining%20experience&width=400&height=250&seq=rest1&orientation=landscape',
+      isVeg: false,
+      offers: '50% OFF'
+    },
+    {
+      id: '2',
+      name: 'Pizza Palace',
+      cuisine: 'Italian, Fast Food',
+      rating: 4.1,
+      deliveryTime: '20-25 mins',
+      priceRange: '₹300 for two',
+      image: 'https://readdy.ai/api/search-image?query=cozy%20italian%20pizzeria%20with%20wood%20fired%20oven%20rustic%20brick%20walls%20and%20checkered%20tablecloths%20creating%20authentic%20mediterranean%20dining%20atmosphere&width=400&height=250&seq=rest2&orientation=landscape',
+      isVeg: true
+    },
+    {
+      id: '3',
+      name: 'Burger Junction',
+      cuisine: 'American, Burgers',
+      rating: 4.5,
+      deliveryTime: '15-20 mins',
+      priceRange: '₹250 for two',
+      image: 'https://readdy.ai/api/search-image?query=trendy%20american%20burger%20joint%20with%20neon%20signs%20industrial%20decor%20and%20modern%20seating%20creating%20vibrant%20casual%20dining%20environment&width=400&height=250&seq=rest3&orientation=landscape',
+      isVeg: false,
+      offers: '30% OFF'
+    },
+    {
+      id: '4',
+      name: 'Sushi Express',
+      cuisine: 'Japanese, Sushi',
+      rating: 4.6,
+      deliveryTime: '30-35 mins',
+      priceRange: '₹500 for two',
+      image: 'https://readdy.ai/api/search-image?query=elegant%20japanese%20sushi%20restaurant%20with%20minimalist%20design%20bamboo%20elements%20and%20clean%20lines%20creating%20serene%20authentic%20dining%20experience&width=400&height=250&seq=rest4&orientation=landscape',
+      isVeg: false
+    },
+    {
+      id: '5',
+      name: 'Taco Fiesta',
+      cuisine: 'Mexican, Tex-Mex',
+      rating: 4.2,
+      deliveryTime: '20-25 mins',
+      priceRange: '₹300 for two',
+      image: 'https://readdy.ai/api/search-image?query=vibrant%20mexican%20restaurant%20with%20colorful%20decorations%20traditional%20tiles%20and%20festive%20atmosphere%20creating%20lively%20dining%20experience&width=400&height=250&seq=rest5&orientation=landscape',
+      isVeg: true,
+      offers: '40% OFF'
+    },
+    {
+      id: '6',
+      name: 'Cafe Delight',
+      cuisine: 'Continental, Cafe',
+      rating: 4.0,
+      deliveryTime: '25-30 mins',
+      priceRange: '₹350 for two',
+      image: 'https://readdy.ai/api/search-image?query=cozy%20european%20cafe%20with%20exposed%20brick%20walls%20wooden%20furniture%20and%20warm%20lighting%20creating%20intimate%20comfortable%20dining%20atmosphere&width=400&height=250&seq=rest6&orientation=landscape',
+      isVeg: true
+    }
+  ];
+
+  const menuItems: MenuItem[] = [
+    {
+      id: '1',
+      name: 'Butter Chicken',
+      description: 'Tender chicken in rich tomato and butter gravy',
+      price: 320,
+      image: 'https://readdy.ai/api/search-image?query=delicious%20butter%20chicken%20curry%20in%20ceramic%20bowl%20with%20creamy%20orange%20sauce%20garnished%20with%20fresh%20herbs%20on%20white%20background&width=200&height=150&seq=menu1&orientation=landscape',
+      isVeg: false,
+      category: 'Main Course'
+    },
+    {
+      id: '2',
+      name: 'Paneer Tikka',
+      description: 'Grilled cottage cheese with spices and vegetables',
+      price: 280,
+      image: 'https://readdy.ai/api/search-image?query=grilled%20paneer%20tikka%20skewers%20with%20colorful%20bell%20peppers%20and%20onions%20served%20on%20wooden%20plate%20with%20mint%20chutney%20on%20white%20background&width=200&height=150&seq=menu2&orientation=landscape',
+      isVeg: true,
+      category: 'Starters'
+    },
+    {
+      id: '3',
+      name: 'Chicken Biryani',
+      description: 'Aromatic basmati rice with spiced chicken',
+      price: 380,
+      image: 'https://readdy.ai/api/search-image?query=fragrant%20chicken%20biryani%20in%20traditional%20copper%20pot%20with%20saffron%20rice%20tender%20meat%20and%20garnished%20with%20fried%20onions%20on%20white%20background&width=200&height=150&seq=menu3&orientation=landscape',
+      isVeg: false,
+      category: 'Main Course'
+    },
+    {
+      id: '4',
+      name: 'Margherita Pizza',
+      description: 'Classic pizza with tomato sauce, mozzarella and basil',
+      price: 450,
+      image: 'https://readdy.ai/api/search-image?query=classic%20margherita%20pizza%20with%20melted%20mozzarella%20cheese%20fresh%20basil%20leaves%20and%20tomato%20sauce%20on%20wooden%20board%20white%20background&width=200&height=150&seq=menu4&orientation=landscape',
+      isVeg: true,
+      category: 'Pizza'
+    },
+    {
+      id: '5',
+      name: 'Chicken Burger',
+      description: 'Juicy grilled chicken patty with lettuce and mayo',
+      price: 250,
+      image: 'https://readdy.ai/api/search-image?query=gourmet%20chicken%20burger%20with%20grilled%20patty%20fresh%20lettuce%20tomato%20and%20sesame%20bun%20served%20with%20golden%20fries%20on%20white%20background&width=200&height=150&seq=menu5&orientation=landscape',
+      isVeg: false,
+      category: 'Burgers'
+    },
+    {
+      id: '6',
+      name: 'Veggie Wrap',
+      description: 'Fresh vegetables wrapped in soft tortilla',
+      price: 180,
+      image: 'https://readdy.ai/api/search-image?query=healthy%20vegetable%20wrap%20with%20colorful%20fresh%20vegetables%20in%20whole%20wheat%20tortilla%20cut%20in%20half%20showing%20filling%20on%20white%20background&width=200&height=150&seq=menu6&orientation=landscape',
+      isVeg: true,
+      category: 'Wraps'
+    }
+  ];
+
+  const categories = [
+    { name: 'Pizza', icon: 'fas fa-pizza-slice' },
+    { name: 'Burgers', icon: 'fas fa-hamburger' },
+    { name: 'Chinese', icon: 'fas fa-utensils' },
+    { name: 'Indian', icon: 'fas fa-pepper-hot' },
+    { name: 'Italian', icon: 'fas fa-leaf' },
+    { name: 'Desserts', icon: 'fas fa-ice-cream' },
+    { name: 'Beverages', icon: 'fas fa-coffee' },
+    { name: 'Healthy', icon: 'fas fa-seedling' }
+  ];
+
+  const addToCart = (item: MenuItem) => {
+    const existingItem = cartItems.find(cartItem => cartItem.id === item.id);
+    if (existingItem) {
+      setCartItems(cartItems.map(cartItem =>
+        cartItem.id === item.id
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem
+      ));
+    } else {
+      setCartItems([...cartItems, { ...item, quantity: 1 }]);
+    }
+    message.success('Item added to cart');
+  };
+
+  const updateCartQuantity = (itemId: string, quantity: number) => {
+    if (quantity === 0) {
+      setCartItems(cartItems.filter(item => item.id !== itemId));
+    } else {
+      setCartItems(cartItems.map(item =>
+        item.id === itemId ? { ...item, quantity } : item
+      ));
+    }
+  };
+
+  const getTotalAmount = () => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const handleLogin = (values: any) => {
+    const mockUser: User = {
+      id: '1',
+      name: 'John Doe',
+      email: values.email,
+      phone: '+1 234 567 8900',
+      addresses: [
+        {
+          id: '1',
+          type: 'Home',
+          address: '123 Main Street, Downtown',
+          landmark: 'Near Central Mall'
+        },
+        {
+          id: '2',
+          type: 'Office',
+          address: '456 Business Ave, Tech Park',
+          landmark: 'Tower B, 5th Floor'
+        }
+      ]
+    };
+    setUser(mockUser);
+    setIsLoginModalVisible(false);
+    message.success('Login successful!');
+  };
+
+  const handleSignup = (values: any) => {
+    const mockUser: User = {
+      id: '1',
+      name: values.name,
+      email: values.email,
+      phone: values.phone,
+      addresses: []
+    };
+    setUser(mockUser);
+    setIsSignupModalVisible(false);
+    message.success('Account created successfully!');
+  };
+
+  const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      message.warning('Your cart is empty');
+      return;
+    }
+    if (!user) {
+      setIsLoginModalVisible(true);
+      return;
+    }
+    setCurrentPage('checkout');
+    setCheckoutStep(0);
+  };
+
+  const handlePlaceOrder = () => {
+    setOrderPlaced(true);
+    setCartItems([]);
+    setCheckoutStep(3);
+    message.success('Order placed successfully!');
+  };
+
+  const renderHeader = () => (
+    <header className="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center space-x-8">
+            <div 
+              className="text-2xl font-bold text-red-600 cursor-pointer"
+              onClick={() => setCurrentPage('home')}
+            >
+              FoodieExpress
+            </div>
+            <nav className="hidden md:flex space-x-6">
+              <Button 
+                type="text" 
+                className="text-gray-700 hover:text-red-600 cursor-pointer"
+                onClick={() => setCurrentPage('home')}
+              >
+                Home
+              </Button>
+              <Button 
+                type="text" 
+                className="text-gray-700 hover:text-red-600 cursor-pointer"
+              >
+                Delivery
+              </Button>
+              <Button 
+                type="text" 
+                className="text-gray-700 hover:text-red-600 cursor-pointer"
+              >
+                Offers
+              </Button>
+              <Button 
+                type="text" 
+                className="text-gray-700 hover:text-red-600 cursor-pointer"
+              >
+                Help
+              </Button>
+            </nav>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <Badge count={cartItems.length} className="cursor-pointer">
+              <Button 
+                type="text" 
+                icon={<ShoppingCartOutlined />} 
+                className="text-gray-700 hover:text-red-600 cursor-pointer"
+                onClick={() => setIsCartVisible(true)}
+              >
+                Cart
+              </Button>
+            </Badge>
+            
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <Avatar icon={<UserOutlined />} />
+                <span className="hidden md:inline text-gray-700">{user.name}</span>
+              </div>
+            ) : (
+              <div className="hidden md:flex space-x-2">
+                <Button 
+                  type="text" 
+                  className="text-gray-700 hover:text-red-600 cursor-pointer !rounded-button whitespace-nowrap"
+                  onClick={() => setIsLoginModalVisible(true)}
+                >
+                  Login
+                </Button>
+                <Button 
+                  type="primary" 
+                  className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                  onClick={() => setIsSignupModalVisible(true)}
+                >
+                  Sign Up
+                </Button>
+              </div>
+            )}
+            
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              className="md:hidden cursor-pointer"
+              onClick={() => setIsMobileMenuVisible(true)}
+            />
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+
+  const renderHeroSection = () => (
+    <section 
+      className="relative h-96 bg-cover bg-center bg-no-repeat flex items-center justify-center"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://readdy.ai/api/search-image?query=vibrant%20food%20delivery%20hero%20background%20with%20colorful%20fresh%20ingredients%20vegetables%20fruits%20and%20cooking%20utensils%20arranged%20artistically%20creating%20appetizing%20culinary%20scene&width=1440&height=400&seq=hero1&orientation=landscape')`
+      }}
+    >
+      <div className="text-center text-white max-w-4xl px-4">
+        <h1 className="text-4xl md:text-6xl font-bold mb-4">
+          Order food online from your favorite restaurants
+        </h1>
+        <p className="text-xl mb-8">
+          Discover the best food & drinks in your city
+        </p>
+        
+        <div className="bg-white rounded-lg p-4 shadow-lg max-w-2xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <Search
+                placeholder="Enter your location"
+                prefix={<EnvironmentOutlined className="text-gray-400" />}
+                value={searchLocation}
+                onChange={(e) => setSearchLocation(e.target.value)}
+                className="text-gray-800"
+                size="large"
+              />
+            </div>
+            <div className="flex-1">
+              <Search
+                placeholder="Search for restaurant, cuisine or dish"
+                prefix={<SearchOutlined className="text-gray-400" />}
+                value={searchFood}
+                onChange={(e) => setSearchFood(e.target.value)}
+                onSearch={() => setCurrentPage('search')}
+                className="text-gray-800"
+                size="large"
+                enterButton="Search"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderCategories = () => (
+    <section className="py-16 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center mb-12">What's on your mind?</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6">
+          {categories.map((category, index) => (
+            <div key={index} className="text-center cursor-pointer group">
+              <div className="w-20 h-20 mx-auto mb-3 bg-white rounded-full shadow-md flex items-center justify-center group-hover:shadow-lg transition-shadow">
+                <i className={`${category.icon} text-2xl text-red-600`}></i>
+              </div>
+              <p className="text-sm font-medium text-gray-700">{category.name}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderRestaurantCard = (restaurant: Restaurant) => (
+    <Card
+      key={restaurant.id}
+      hoverable
+      className="cursor-pointer"
+      cover={
+        <div className="relative overflow-hidden h-48">
+          <img
+            src={restaurant.image}
+            alt={restaurant.name}
+            className="w-full h-full object-cover object-top"
+          />
+          {restaurant.offers && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
+              {restaurant.offers}
+            </div>
+          )}
+          <div className="absolute top-2 right-2">
+            <HeartOutlined className="text-white text-xl" />
+          </div>
+        </div>
+      }
+      onClick={() => {
+        setSelectedRestaurant(restaurant);
+        setCurrentPage('restaurant');
+      }}
+    >
+      <div className="p-2">
+        <h3 className="text-lg font-semibold mb-1">{restaurant.name}</h3>
+        <p className="text-gray-600 text-sm mb-2">{restaurant.cuisine}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Rate disabled defaultValue={restaurant.rating} allowHalf className="text-sm" />
+            <span className="text-sm text-gray-600">{restaurant.rating}</span>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600">{restaurant.deliveryTime}</p>
+            <p className="text-sm font-medium">{restaurant.priceRange}</p>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+
+  const renderFeaturedRestaurants = () => (
+    <section className="py-16">
+      <div className="max-w-7xl mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center mb-12">Featured Restaurants</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {restaurants.map(renderRestaurantCard)}
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderSearchResults = () => (
+    <div className="pt-20 min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="lg:w-1/4">
+            <Card title="Filters" className="mb-6">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-medium mb-3">Rating</h4>
+                  <Checkbox.Group>
+                    <div className="space-y-2">
+                      <Checkbox value="4+">4.0+ Rating</Checkbox>
+                      <Checkbox value="3.5+">3.5+ Rating</Checkbox>
+                      <Checkbox value="3+">3.0+ Rating</Checkbox>
+                    </div>
+                  </Checkbox.Group>
+                </div>
+                
+                <Divider />
+                
+                <div>
+                  <h4 className="font-medium mb-3">Price Range</h4>
+                  <Checkbox.Group>
+                    <div className="space-y-2">
+                      <Checkbox value="budget">Under ₹200</Checkbox>
+                      <Checkbox value="mid">₹200 - ₹400</Checkbox>
+                      <Checkbox value="premium">Above ₹400</Checkbox>
+                    </div>
+                  </Checkbox.Group>
+                </div>
+                
+                <Divider />
+                
+                <div>
+                  <h4 className="font-medium mb-3">Cuisine</h4>
+                  <Checkbox.Group>
+                    <div className="space-y-2">
+                      <Checkbox value="indian">Indian</Checkbox>
+                      <Checkbox value="chinese">Chinese</Checkbox>
+                      <Checkbox value="italian">Italian</Checkbox>
+                      <Checkbox value="american">American</Checkbox>
+                    </div>
+                  </Checkbox.Group>
+                </div>
+              </div>
+            </Card>
+          </div>
+          
+          <div className="lg:w-3/4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Restaurants near you</h2>
+              <Select defaultValue="relevance" className="w-40">
+                <Option value="relevance">Relevance</Option>
+                <Option value="rating">Rating</Option>
+                <Option value="delivery">Delivery Time</Option>
+                <Option value="price">Price</Option>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {restaurants.map(renderRestaurantCard)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRestaurantDetail = () => {
+    if (!selectedRestaurant) return null;
+
+    return (
+      <div className="pt-20 min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div 
+            className="h-64 bg-cover bg-center relative"
+            style={{ backgroundImage: `url(${selectedRestaurant.image})` }}
+          >
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
+              <div className="p-8 text-white">
+                <h1 className="text-4xl font-bold mb-2">{selectedRestaurant.name}</h1>
+                <p className="text-xl mb-2">{selectedRestaurant.cuisine}</p>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-1">
+                    <StarOutlined />
+                    <span>{selectedRestaurant.rating}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <ClockCircleOutlined />
+                    <span>{selectedRestaurant.deliveryTime}</span>
+                  </div>
+                  <span>{selectedRestaurant.priceRange}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col lg:flex-row gap-8 p-8">
+            <div className="lg:w-2/3">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-2xl font-bold mb-6">Menu</h2>
+                
+                <Tabs defaultActiveKey="1">
+                  <TabPane tab="Starters" key="1">
+                    <div className="space-y-4">
+                      {menuItems.filter(item => item.category === 'Starters').map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <img src={item.image} alt={item.name} className="w-16 h-16 rounded object-cover object-top" />
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h3 className="font-medium">{item.name}</h3>
+                                {item.isVeg ? (
+                                  <div className="w-4 h-4 border-2 border-green-500 flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  </div>
+                                ) : (
+                                  <div className="w-4 h-4 border-2 border-red-500 flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-gray-600 text-sm">{item.description}</p>
+                              <p className="font-semibold">₹{item.price}</p>
+                            </div>
+                          </div>
+                          <Button 
+                            type="primary" 
+                            className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                            onClick={() => addToCart(item)}
+                          >
+                            Add to Cart
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </TabPane>
+                  
+                  <TabPane tab="Main Course" key="2">
+                    <div className="space-y-4">
+                      {menuItems.filter(item => item.category === 'Main Course').map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <img src={item.image} alt={item.name} className="w-16 h-16 rounded object-cover object-top" />
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h3 className="font-medium">{item.name}</h3>
+                                {item.isVeg ? (
+                                  <div className="w-4 h-4 border-2 border-green-500 flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  </div>
+                                ) : (
+                                  <div className="w-4 h-4 border-2 border-red-500 flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-gray-600 text-sm">{item.description}</p>
+                              <p className="font-semibold">₹{item.price}</p>
+                            </div>
+                          </div>
+                          <Button 
+                            type="primary" 
+                            className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                            onClick={() => addToCart(item)}
+                          >
+                            Add to Cart
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </TabPane>
+                </Tabs>
+              </div>
+            </div>
+            
+            <div className="lg:w-1/3">
+              <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
+                <h3 className="text-xl font-bold mb-4">Your Order</h3>
+                {cartItems.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+                ) : (
+                  <>
+                    <div className="space-y-3 mb-4">
+                      {cartItems.map(item => (
+                        <div key={item.id} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm">{item.name}</h4>
+                            <p className="text-gray-600 text-sm">₹{item.price}</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              size="small" 
+                              icon={<MinusOutlined />}
+                              onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                              className="cursor-pointer !rounded-button"
+                            />
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button 
+                              size="small" 
+                              icon={<PlusOutlined />}
+                              onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                              className="cursor-pointer !rounded-button"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <Divider />
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span>₹{getTotalAmount()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Delivery Fee</span>
+                        <span>₹40</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>Total</span>
+                        <span>₹{getTotalAmount() + 40}</span>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      type="primary" 
+                      size="large" 
+                      block 
+                      className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                      onClick={handleCheckout}
+                    >
+                      Proceed to Checkout
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCheckout = () => (
+    <div className="pt-20 min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        
+        <Steps current={checkoutStep} className="mb-8">
+          <Step title="Address" />
+          <Step title="Payment" />
+          <Step title="Review" />
+          <Step title="Confirmation" />
+        </Steps>
+        
+        {checkoutStep === 0 && (
+          <Card title="Delivery Address">
+            <div className="space-y-4">
+              {user?.addresses.map(address => (
+                <div 
+                  key={address.id} 
+                  className={`p-4 border rounded-lg cursor-pointer ${selectedAddress?.id === address.id ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+                  onClick={() => setSelectedAddress(address)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">{address.type}</h4>
+                      <p className="text-gray-600">{address.address}</p>
+                      <p className="text-gray-500 text-sm">{address.landmark}</p>
+                    </div>
+                    <Radio checked={selectedAddress?.id === address.id} />
+                  </div>
+                </div>
+              ))}
+              
+              <Button 
+                type="dashed" 
+                block 
+                icon={<PlusOutlined />}
+                className="cursor-pointer !rounded-button whitespace-nowrap"
+              >
+                Add New Address
+              </Button>
+              
+              <div className="flex justify-end space-x-4 mt-6">
+                <Button 
+                  type="primary" 
+                  className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                  onClick={() => setCheckoutStep(1)}
+                  disabled={!selectedAddress}
+                >
+                  Continue to Payment
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+        
+        {checkoutStep === 1 && (
+          <Card title="Payment Method">
+            <Radio.Group value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full">
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg">
+                  <Radio value="card">
+                    <div className="flex items-center space-x-2">
+                      <CreditCardOutlined />
+                      <span>Credit/Debit Card</span>
+                    </div>
+                  </Radio>
+                  {paymentMethod === 'card' && (
+                    <div className="mt-4 ml-6 space-y-4">
+                      <Input placeholder="Card Number" />
+                      <div className="flex space-x-4">
+                        <Input placeholder="MM/YY" className="w-1/2" />
+                        <Input placeholder="CVV" className="w-1/2" />
+                      </div>
+                      <Input placeholder="Cardholder Name" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-4 border rounded-lg">
+                  <Radio value="upi">
+                    <div className="flex items-center space-x-2">
+                      <i className="fas fa-mobile-alt"></i>
+                      <span>UPI</span>
+                    </div>
+                  </Radio>
+                  {paymentMethod === 'upi' && (
+                    <div className="mt-4 ml-6">
+                      <Input placeholder="Enter UPI ID" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-4 border rounded-lg">
+                  <Radio value="wallet">
+                    <div className="flex items-center space-x-2">
+                      <WalletOutlined />
+                      <span>Digital Wallet</span>
+                    </div>
+                  </Radio>
+                </div>
+              </div>
+            </Radio.Group>
+            
+            <div className="flex justify-between space-x-4 mt-6">
+              <Button 
+                className="cursor-pointer !rounded-button whitespace-nowrap"
+                onClick={() => setCheckoutStep(0)}
+              >
+                Back
+              </Button>
+              <Button 
+                type="primary" 
+                className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                onClick={() => setCheckoutStep(2)}
+              >
+                Continue to Review
+              </Button>
+            </div>
+          </Card>
+        )}
+        
+        {checkoutStep === 2 && (
+          <Card title="Order Summary">
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-2">Delivery Address</h4>
+                <p className="text-gray-600">{selectedAddress?.address}</p>
+              </div>
+              
+              <Divider />
+              
+              <div>
+                <h4 className="font-medium mb-4">Order Items</h4>
+                <div className="space-y-3">
+                  {cartItems.map(item => (
+                    <div key={item.id} className="flex justify-between items-center">
+                      <div>
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-gray-600 ml-2">x{item.quantity}</span>
+                      </div>
+                      <span>₹{item.price * item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <Divider />
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₹{getTotalAmount()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Delivery Fee</span>
+                  <span>₹40</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span>₹{getTotalAmount() + 40}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between space-x-4 mt-6">
+                <Button 
+                  className="cursor-pointer !rounded-button whitespace-nowrap"
+                  onClick={() => setCheckoutStep(1)}
+                >
+                  Back
+                </Button>
+                <Button 
+                  type="primary" 
+                  size="large"
+                  className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                  onClick={handlePlaceOrder}
+                >
+                  Place Order
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+        
+        {checkoutStep === 3 && orderPlaced && (
+          <Card className="text-center">
+            <div className="py-8">
+              <CheckCircleOutlined className="text-6xl text-green-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-4">Order Placed Successfully!</h2>
+              <p className="text-gray-600 mb-6">Your order #FE12345 has been confirmed</p>
+              <p className="text-gray-600 mb-8">Estimated delivery time: 25-30 minutes</p>
+              
+              <div className="space-x-4">
+                <Button 
+                  type="primary" 
+                  className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+                  onClick={() => setCurrentPage('home')}
+                >
+                  Continue Shopping
+                </Button>
+                <Button 
+                  className="cursor-pointer !rounded-button whitespace-nowrap"
+                >
+                  Track Order
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCartDrawer = () => (
+    <Drawer
+      title="Your Cart"
+      placement="right"
+      onClose={() => setIsCartVisible(false)}
+      open={isCartVisible}
+      width={400}
+    >
+      {cartItems.length === 0 ? (
+        <div className="text-center py-8">
+          <ShoppingCartOutlined className="text-6xl text-gray-300 mb-4" />
+          <p className="text-gray-500">Your cart is empty</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-4 mb-6">
+            {cartItems.map(item => (
+              <div key={item.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                <img src={item.image} alt={item.name} className="w-12 h-12 rounded object-cover object-top" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">{item.name}</h4>
+                  <p className="text-gray-600 text-sm">₹{item.price}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    size="small" 
+                    icon={<MinusOutlined />}
+                    onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                    className="cursor-pointer !rounded-button"
+                  />
+                  <span className="w-8 text-center">{item.quantity}</span>
+                  <Button 
+                    size="small" 
+                    icon={<PlusOutlined />}
+                    onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                    className="cursor-pointer !rounded-button"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="border-t pt-4 space-y-2 mb-6">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{getTotalAmount()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Delivery Fee</span>
+              <span>₹40</span>
+            </div>
+            <div className="flex justify-between font-bold text-lg">
+              <span>Total</span>
+              <span>₹{getTotalAmount() + 40}</span>
+            </div>
+          </div>
+          
+          <Button 
+            type="primary" 
+            size="large" 
+            block 
+            className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+            onClick={() => {
+              setIsCartVisible(false);
+              handleCheckout();
+            }}
+          >
+            Proceed to Checkout
+          </Button>
+        </>
+      )}
+    </Drawer>
+  );
+
+  const renderLoginModal = () => (
+    <Modal
+      title="Login"
+      open={isLoginModalVisible}
+      onCancel={() => setIsLoginModalVisible(false)}
+      footer={null}
+    >
+      <Form onFinish={handleLogin} layout="vertical">
+        <Form.Item
+          name="email"
+          label="Email"
+          rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item
+          name="password"
+          label="Password"
+          rules={[{ required: true, message: 'Please enter your password' }]}
+        >
+          <Input.Password />
+        </Form.Item>
+        <Form.Item>
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            block 
+            className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+          >
+            Login
+          </Button>
+        </Form.Item>
+        <div className="text-center">
+          <span className="text-gray-600">Don't have an account? </span>
+          <Button 
+            type="link" 
+            className="text-red-600 hover:text-red-700 cursor-pointer p-0"
+            onClick={() => {
+              setIsLoginModalVisible(false);
+              setIsSignupModalVisible(true);
+            }}
+          >
+            Sign up
+          </Button>
+        </div>
+      </Form>
+    </Modal>
+  );
+
+  const renderSignupModal = () => (
+    <Modal
+      title="Sign Up"
+      open={isSignupModalVisible}
+      onCancel={() => setIsSignupModalVisible(false)}
+      footer={null}
+    >
+      <Form onFinish={handleSignup} layout="vertical">
+        <Form.Item
+          name="name"
+          label="Full Name"
+          rules={[{ required: true, message: 'Please enter your name' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item
+          name="email"
+          label="Email"
+          rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item
+          name="phone"
+          label="Phone Number"
+          rules={[{ required: true, message: 'Please enter your phone number' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item
+          name="password"
+          label="Password"
+          rules={[{ required: true, min: 6, message: 'Password must be at least 6 characters' }]}
+        >
+          <Input.Password />
+        </Form.Item>
+        <Form.Item>
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            block 
+            className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+          >
+            Sign Up
+          </Button>
+        </Form.Item>
+        <div className="text-center">
+          <span className="text-gray-600">Already have an account? </span>
+          <Button 
+            type="link" 
+            className="text-red-600 hover:text-red-700 cursor-pointer p-0"
+            onClick={() => {
+              setIsSignupModalVisible(false);
+              setIsLoginModalVisible(true);
+            }}
+          >
+            Login
+          </Button>
+        </div>
+      </Form>
+    </Modal>
+  );
+
+  const renderMobileMenu = () => (
+    <Drawer
+      title="Menu"
+      placement="left"
+      onClose={() => setIsMobileMenuVisible(false)}
+      open={isMobileMenuVisible}
+    >
+      <div className="space-y-4">
+        <Button 
+          type="text" 
+          block 
+          className="text-left cursor-pointer !rounded-button whitespace-nowrap"
+          onClick={() => {
+            setCurrentPage('home');
+            setIsMobileMenuVisible(false);
+          }}
+        >
+          Home
+        </Button>
+        <Button 
+          type="text" 
+          block 
+          className="text-left cursor-pointer !rounded-button whitespace-nowrap"
+        >
+          Delivery
+        </Button>
+        <Button 
+          type="text" 
+          block 
+          className="text-left cursor-pointer !rounded-button whitespace-nowrap"
+        >
+          Offers
+        </Button>
+        <Button 
+          type="text" 
+          block 
+          className="text-left cursor-pointer !rounded-button whitespace-nowrap"
+        >
+          Help
+        </Button>
+        
+        {!user && (
+          <>
+            <Divider />
+            <Button 
+              type="text" 
+              block 
+              className="text-left cursor-pointer !rounded-button whitespace-nowrap"
+              onClick={() => {
+                setIsLoginModalVisible(true);
+                setIsMobileMenuVisible(false);
+              }}
+            >
+              Login
+            </Button>
+            <Button 
+              type="primary" 
+              block 
+              className="bg-red-600 border-red-600 hover:bg-red-700 cursor-pointer !rounded-button whitespace-nowrap"
+              onClick={() => {
+                setIsSignupModalVisible(true);
+                setIsMobileMenuVisible(false);
+              }}
+            >
+              Sign Up
+            </Button>
+          </>
+        )}
+      </div>
+    </Drawer>
+  );
+
+  const renderHomePage = () => (
+    <div className="pt-16 min-h-screen">
+      {renderHeroSection()}
+      {renderCategories()}
+      {renderFeaturedRestaurants()}
+    </div>
+  );
+
+  const renderFooter = () => (
+    <footer className="bg-gray-900 text-white py-12">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div>
+            <h3 className="text-xl font-bold mb-4">FoodieExpress</h3>
+            <p className="text-gray-400 mb-4">
+              Discover the best food & drinks in your city. Order online from your favorite restaurants.
+            </p>
+            <div className="flex space-x-4">
+              <i className="fab fa-facebook-f text-xl cursor-pointer hover:text-red-500"></i>
+              <i className="fab fa-twitter text-xl cursor-pointer hover:text-red-500"></i>
+              <i className="fab fa-instagram text-xl cursor-pointer hover:text-red-500"></i>
+              <i className="fab fa-linkedin-in text-xl cursor-pointer hover:text-red-500"></i>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">Company</h4>
+            <ul className="space-y-2 text-gray-400">
+              <li><a href="#" className="hover:text-white cursor-pointer">About Us</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Careers</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Press</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Blog</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">For Restaurants</h4>
+            <ul className="space-y-2 text-gray-400">
+              <li><a href="#" className="hover:text-white cursor-pointer">Partner With Us</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Apps For You</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Restaurant Dashboard</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-4">Support</h4>
+            <ul className="space-y-2 text-gray-400">
+              <li><a href="#" className="hover:text-white cursor-pointer">Help Center</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Contact Us</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-white cursor-pointer">Terms of Service</a></li>
+            </ul>
+          </div>
+        </div>
+        
+        <Divider className="border-gray-700 my-8" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <p className="text-gray-400 text-sm">
+            © 2024 FoodieExpress. All rights reserved.
+          </p>
+          <div className="flex items-center space-x-4 mt-4 md:mt-0">
+            <span className="text-gray-400 text-sm">We accept:</span>
+            <i className="fab fa-cc-visa text-2xl"></i>
+            <i className="fab fa-cc-mastercard text-2xl"></i>
+            <i className="fab fa-cc-paypal text-2xl"></i>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+
+  return (
+    <div className="min-h-screen bg-white">
+      <style>{`
+        .!rounded-button {
+          border-radius: 6px !important;
+        }
+        body {
+          min-height: 1024px;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+      
+      {renderHeader()}
+      
+      {currentPage === 'home' && renderHomePage()}
+      {currentPage === 'search' && renderSearchResults()}
+      {currentPage === 'restaurant' && renderRestaurantDetail()}
+      {currentPage === 'checkout' && renderCheckout()}
+      
+      {renderFooter()}
+      {renderCartDrawer()}
+      {renderLoginModal()}
+      {renderSignupModal()}
+      {renderMobileMenu()}
+    </div>
+  );
+};
+
+export default App;
